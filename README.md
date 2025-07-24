@@ -1,60 +1,68 @@
 # Amazon SES Bundle for Mautic 6.0
 
-🚀 **Plugin Amazon SES completo** para Mautic 6.0 com funcionalidades avançadas de email transport.
+🚀 **Plugin Amazon SES completo** para Mautic 6.0 com funcionalidades avançadas de email transport e processamento de callbacks.
 
 ## 🎯 **Características Principais**
 
 ### ✅ **Configurações Dinâmicas via UI do Mautic**
-- 🔧 **Interface nativa**: Configure através do painel do Mautic
-- 🔄 **DSN automático**: Mautic gera automaticamente `ses+api://ACCESS_KEY:SECRET_KEY@default?region=REGION`
-- 🌍 **Multi-idioma**: Português e Inglês
-- 📊 **EventSubscriber nativo**: Processamento automático de webhooks seguindo padrão oficial
+- 🔧 **Interface nativa**: Configure através do painel administrativo do Mautic
+- 🔄 **DSN automático**: Integração completa com sistema de transporte do Mautic
+- 🌍 **Multi-idioma**: Suporte completo em Português e Inglês
+- 📊 **EventSubscriber nativo**: Processamento automático de webhooks
 
 ### ✅ **Processamento Avançado de Callbacks**
 - 📨 **Bounces automáticos**: Marcação automática de contatos como bounced
 - 🚫 **Complaints automáticos**: Marcação automática de contatos como unsubscribed  
 - 🔔 **Confirmação SNS**: Confirmação automática de subscrições SNS
 - 🎯 **TransportCallback nativo**: Integração completa com sistema de callback do Mautic
-- 🔒 **Validação DSN**: Só processa callbacks quando Amazon SES está ativo
+- 🔒 **Validação DSN**: Processa callbacks apenas quando Amazon SES está ativo
 
 ## 📦 **Instalação**
 
-### 1. Via Docker (Atual)
+### Requisitos
+- Mautic 6.0+
+- PHP 8.1+
+- AWS SDK PHP
+
+### Instalação via Composer
 ```bash
-# Plugin já está instalado no exemplo custom-plugins
-docker-compose up -d --build
+composer require rhafaman/mautic-amazon-ses-bundle
 ```
 
-### 2. Instalação Manual
+### Instalação Manual
 ```bash
-# Copiar plugin para o diretório de plugins do Mautic
-cp -r AmazonSESBundle /var/www/html/docroot/plugins/
+# 1. Baixar e extrair o plugin
+wget https://github.com/rhafaman/mautic-amazon-ses-bundle/archive/main.zip
 
-# Instalar dependências AWS SDK (se não instaladas)
+# 2. Extrair no diretório de plugins do Mautic
+unzip main.zip -d /var/www/html/plugins/
+mv /var/www/html/plugins/mautic-amazon-ses-bundle-main /var/www/html/plugins/AmazonSESBundle
+
+# 3. Instalar dependências AWS SDK (se necessário)
 composer require aws/aws-sdk-php
 
-# Recarregar plugins
+# 4. Recarregar plugins
 php bin/console mautic:plugins:reload
 
-# Limpar cache
+# 5. Limpar cache
 php bin/console cache:clear
 ```
 
 ## ⚙️ **Configuração**
 
-### 1. **Mautic UI (Recomendado)**
+### 1. **Configuração via Interface do Mautic (Recomendado)**
 1. Acesse **Configurações** → **Configuração** → **Configurações de Email**
-2. Em **Esquema do Transport de Email**, selecione: `ses+api`
+2. Em **Esquema do Transport de Email**, selecione: `Amazon SES API`
 3. Configure os campos:
    - **Host**: `default`
    - **Porta**: `465`
    - **Usuário**: `SUA_AWS_ACCESS_KEY`
    - **Senha**: `SUA_AWS_SECRET_KEY`
-   - **Região**: `us-east-1` (ou sua região preferida)
+   - **Região**: Sua região AWS (ex: `us-east-1`)
 
-### 2. **Via DSN Direto**
+### 2. **Configuração via Variável de Ambiente**
 ```bash
-# Exemplo de DSN completo
+# Defina a variável MAILER_DSN no seu .env
 MAILER_DSN="ses+api://ACCESS_KEY:SECRET_KEY@default?region=us-east-1"
 ```
 
@@ -62,134 +70,122 @@ MAILER_DSN="ses+api://ACCESS_KEY:SECRET_KEY@default?region=us-east-1"
 
 ### 1. **Criar Tópico SNS**
 ```bash
-# No AWS Console ou CLI
-aws sns create-topic --name mautic-ses-events
+aws sns create-topic --name mautic-ses-events --region us-east-1
 ```
 
-### 2. **Configurar SES para Enviar para SNS**
+### 2. **Configurar SES Configuration Set**
 ```bash
-# Associar SES com SNS para bounces e complaints
-aws ses put-configuration-set-event-destination \
-  --configuration-set-name your-config-set \
-  --event-destination Name=sns-destination,Enabled=true,SNSDestination={TopicARN=arn:aws:sns:region:account:mautic-ses-events}
+# Criar configuration set
+aws sesv2 create-configuration-set --configuration-set-name mautic-config
+
+# Adicionar event destination
+aws sesv2 create-configuration-set-event-destination \
+  --configuration-set-name mautic-config \
+  --event-destination-name sns-destination \
+  --event-destination \
+  'Enabled=true,MatchingEventTypes=bounce,complaint,delivery,SnsDestination={TopicArn=arn:aws:sns:us-east-1:ACCOUNT:mautic-ses-events}'
 ```
 
-### 3. **Configurar Subscrição HTTPS**
+### 3. **Configurar Subscrição HTTPS no SNS**
 - **Protocolo**: HTTPS
-- **Endpoint**: `https://seu-mautic.com/mailer/callback`
-- **Habilitar raw message delivery**: ✅ **SIM**
+- **Endpoint**: `https://seu-dominio.com/mailer/callback`
+- **Habilitar raw message delivery**: ✅ **Obrigatório**
 
-## 🎯 **EventSubscriber - Padrão Oficial**
-
-O plugin implementa `CallbackSubscriber` seguindo **exatamente** o padrão do plugin oficial:
+## 🎯 **Processamento de Webhooks**
 
 ### **Eventos Suportados**
-```php
-EmailEvents::ON_TRANSPORT_WEBHOOK => 'processCallbackRequest'
-```
+O plugin processa automaticamente os seguintes tipos de callback:
 
-### **Tipos de Callback Processados**
 1. **SubscriptionConfirmation**: Confirmação automática de subscrições SNS
-2. **Bounce**: Processamento de bounces permanentes
-3. **Complaint**: Processamento de reclamações/spam reports
-4. **Notification**: Processamento de notificações gerais
+2. **Bounce**: Processamento de bounces permanentes e temporários
+3. **Complaint**: Processamento de reclamações de spam
+4. **Delivery**: Confirmações de entrega (opcional)
 
-### **Integração com TransportCallback**
-```php
-// Bounce automático
-$this->transportCallback->addFailureByAddress(
-    $address->getAddress(),
-    $diagnosticCode,
-    DoNotContact::BOUNCED,
-    $emailId
-);
-
-// Complaint automático
-$this->transportCallback->addFailureByAddress(
-    $address->getAddress(),
-    $reason,
-    DoNotContact::UNSUBSCRIBED,
-    $emailId
-);
+### **Endpoint de Callback**
+```
+POST https://seu-dominio.com/mailer/callback
+Content-Type: application/json
 ```
 
 ## 🛠️ **Arquitetura do Plugin**
 
 ```
 AmazonSESBundle/
-├── AmazonSESBundle.php              # Classe principal
+├── AmazonSESBundle.php              # Classe principal do bundle
 ├── Config/
-│   ├── config.php                   # Configuração do plugin
-│   └── services.php                 # Serviços autowired
+│   ├── config.php                   # Configurações do plugin
+│   └── services.php                 # Definição de serviços
 ├── DependencyInjection/
-│   └── AmazonSESExtension.php       # Extension DI
+│   └── AmazonSESExtension.php       # Extensão de injeção de dependência
 ├── EventSubscriber/
-│   └── CallbackSubscriber.php       # ⭐ Processamento webhooks
-├── Transport/
-│   ├── AmazonSesTransport.php       # Transport principal
-│   └── AmazonSesTransportFactory.php # Factory dinâmica
+│   └── CallbackSubscriber.php       # Processamento de webhooks SNS
+├── Services/
+│   └── AmazonSES/                   # Classes de modelo para callbacks
 └── Translations/
-    ├── en_US/messages.ini           # Traduções inglês
-    └── pt_BR/messages.ini           # Traduções português
+    ├── en_US/messages.ini           # Traduções em inglês
+    └── pt_BR/messages.ini           # Traduções em português
 ```
 
-## 🧪 **Teste de Funcionalidade**
+## 🧪 **Teste e Verificação**
 
-### 1. **Teste de Envio**
+### 1. **Teste de Envio de Email**
 ```bash
-# Via CLI do Mautic (dentro do container)
-php bin/console mautic:emails:send --quiet
+# Enviar emails via CLI
+php bin/console mautic:emails:send
+
+# Verificar logs
+tail -f var/logs/mautic_prod.log | grep -i "amazon\|ses"
 ```
 
-### 2. **Teste de Callback**
+### 2. **Teste de Callback SNS**
 ```bash
-# Simular callback SNS
-curl -X POST https://seu-mautic.com/mailer/callback \
+# Simular callback de confirmação
+curl -X POST https://seu-dominio.com/mailer/callback \
   -H "Content-Type: application/json" \
-  -d '{"Type": "SubscriptionConfirmation", "SubscribeURL": "https://sns.amazonaws.com/..."}'
+  -d '{
+    "Type": "SubscriptionConfirmation",
+    "SubscribeURL": "https://sns.amazonaws.com/...",
+    "TopicArn": "arn:aws:sns:us-east-1:123456789:mautic-ses-events"
+  }'
 ```
 
-### 3. **Logs de Verificação**
+### 3. **Verificação de Status**
 ```bash
-# Ver logs do EventSubscriber
-docker-compose logs mautic_web | grep "Amazon SES"
+# Verificar se o plugin está ativo
+php bin/console mautic:plugins:list | grep -i amazon
+
+# Verificar configuração de email
+php bin/console debug:config
 ```
 
-## 🔍 **Diferenças do Plugin Oficial**
+## 📊 **Funcionalidades Implementadas**
 
-| Aspecto | Plugin Oficial | Nossa Implementação |
-|---------|---------------|---------------------|
-| **Base** | `symfony/amazon-mailer` | `aws/aws-sdk-php` |
-| **EventSubscriber** | ✅ Completo | ✅ **Implementado** |
-| **TransportCallback** | ✅ Nativo | ✅ **Implementado** |
-| **Dependency Injection** | Extension + autowiring | Extension + autowiring |
-| **Suporte Mautic** | 5.x | **6.x** |
-| **Traduções** | EN | **PT-BR + EN** |
+- [x] **Transport Factory** com autowiring completo
+- [x] **Configurações dinâmicas** via DSN do Mautic
+- [x] **EventSubscriber** para processamento de webhooks
+- [x] **TransportCallback** automático
+- [x] **Processamento de bounces** permanentes e temporários
+- [x] **Processamento de complaints** automático
+- [x] **Confirmação automática SNS** 
+- [x] **Traduções** em português e inglês
+- [x] **Logs estruturados** para debugging
+- [x] **Validação de DSN** antes do processamento
+- [x] **Compatibilidade** total com Mautic 6.0
 
-## 🚀 **Pronto para Produção**
+## 🔧 **Suporte e Contribuição**
 
-O plugin está **100% funcional** e pronto para:
+### Reportar Problemas
+- GitHub Issues: https://github.com/rhafaman/mautic-amazon-ses-bundle/issues
 
-1. ✅ **Envio de emails** em produção
-2. ✅ **Processamento automático** de bounces/complaints
-3. ✅ **Configuração dinâmica** via UI do Mautic
-4. ✅ **Integração SNS** completa
-5. ✅ **Conformidade** com padrões oficiais do Mautic
+### Contribuir
+- Fork o projeto
+- Crie uma branch para sua feature
+- Faça commit com mensagens descritivas
+- Abra um Pull Request
+
+### Licença
+GPL-3.0-or-later
 
 ---
 
-## 📋 **Recursos Implementados**
-
-- [x] Transport Factory com autowiring
-- [x] Configurações dinâmicas via DSN
-- [x] EventSubscriber para webhooks
-- [x] TransportCallback automático
-- [x] Processamento de bounces permanentes
-- [x] Processamento de complaints
-- [x] Confirmação automática SNS
-- [x] Traduções multi-idioma
-- [x] Logs estruturados
-- [x] Validação DSN
-- [x] Seguir padrão oficial
-
-**Plugin Amazon SES para Mautic 6.0 - Implementação Completa** 🎉 
+**Amazon SES Bundle para Mautic 6.0 - Solução Completa de Email Transport** 🎉 
