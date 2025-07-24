@@ -1,191 +1,170 @@
-# Amazon SES Bundle for Mautic 6.0
+# Mautic 6 Amazon SES Plugin
 
-🚀 **Plugin Amazon SES completo** para Mautic 6.0 com funcionalidades avançadas de email transport e processamento de callbacks.
+<p style="text-align: center;">
+<img src="Assets/img/icon.png" alt="Amazon SES" width="200"/>
+</p>
 
-## 🎯 **Características Principais**
+This plugin enables Mautic 6 to use AWS SES as email transport and provides callbacks to process bounces and complaints.
 
-### ✅ **Configurações Dinâmicas via UI do Mautic**
-- 🔧 **Interface nativa**: Configure através do painel administrativo do Mautic
-- 🔄 **DSN automático**: Integração completa com sistema de transporte do Mautic
-- 🌍 **Multi-idioma**: Suporte completo em Português e Inglês
-- 📊 **EventSubscriber nativo**: Processamento automático de webhooks
+**✨ Enhanced Features:**
+- ✅ Support for both `ses+api` and `ses+smtp` transport schemes
+- ✅ SNS callback processing for bounces and complaints
+- ✅ Advanced debug command for troubleshooting configuration issues
+- ✅ Flexible secret key validation (supports keys of various lengths, including 44-character keys)
+- ✅ Real AWS connection testing
+- ✅ Automatic signature exception debugging
 
-### ✅ **Processamento Avançado de Callbacks**
-- 📨 **Bounces automáticos**: Marcação automática de contatos como bounced
-- 🚫 **Complaints automáticos**: Marcação automática de contatos como unsubscribed  
-- 🔔 **Confirmação SNS**: Confirmação automática de subscrições SNS
-- 🎯 **TransportCallback nativo**: Integração completa com sistema de callback do Mautic
-- 🔒 **Validação DSN**: Processa callbacks apenas quando Amazon SES está ativo
+## INSTALLATION
 
-## 📦 **Instalação**
-
-### Requisitos
-- Mautic 6.0+
-- PHP 8.1+
-- AWS SDK PHP
-
-### Instalação via Composer
+1. Copy the plugin to your Mautic plugins directory:
 ```bash
-composer require rhafaman/mautic-amazon-ses-bundle
+cp -r examples/custom-plugins/plugins/AmazonSESBundle /path/to/mautic/plugins/
 ```
 
-### Instalação Manual
+2. Clear cache:
 ```bash
-# 1. Baixar e extrair o plugin
-wget https://github.com/rhafaman/mautic-amazon-ses-bundle/archive/main.zip
-
-# 2. Extrair no diretório de plugins do Mautic
-unzip main.zip -d /var/www/html/plugins/
-mv /var/www/html/plugins/mautic-amazon-ses-bundle-main /var/www/html/plugins/AmazonSESBundle
-
-# 3. Instalar dependências AWS SDK (se necessário)
-composer require aws/aws-sdk-php
-
-# 4. Recarregar plugins
-php bin/console mautic:plugins:reload
-
-# 5. Limpar cache
 php bin/console cache:clear
 ```
 
-## ⚙️ **Configuração**
-
-### 1. **Configuração via Interface do Mautic (Recomendado)**
-1. Acesse **Configurações** → **Configuração** → **Configurações de Email**
-2. Em **Esquema do Transport de Email**, selecione: `ses+smtp`
-3. Configure os campos:
-   - **Host**: `default`
-   - **Porta**: `465`
-   - **Usuário**: `SUA_AWS_ACCESS_KEY`
-   - **Senha**: `SUA_AWS_SECRET_KEY`
-   - **Região**: Sua região AWS (ex: `us-east-1`)
-
-### 2. **Configuração via Variável de Ambiente**
+3. Install the plugin:
 ```bash
-# Defina a variável MAILER_DSN no seu .env
-MAILER_DSN="ses+api://ACCESS_KEY:SECRET_KEY@default?region=us-east-1"
+php bin/console mautic:plugins:reload
 ```
 
-## 🔔 **Configuração AWS SNS para Callbacks**
+## CONFIGURATION
 
-### 1. **Criar Tópico SNS**
+### Option 1: Using SES API (Recommended)
+
+Configure using the `ses+api` scheme for best performance:
+
+**DSN Format:** `ses+api://ACCESS_KEY:SECRET_KEY@default?region=REGION`
+
+1. Navigate to Configuration > Mail Send Settings
+2. Update the following fields:
+
+| Field    | Value                    |
+| -------- | ------------------------ |
+| Scheme   | `ses+api`               |
+| Host     | `default`               |
+| Port     | `465`                   |
+| User     | `<aws-access-key>`      |
+| Password | `<aws-secret-key>`      |
+| Region   | `<aws-region>`          |
+
+### Option 2: Using SES SMTP
+
+Configure using the `ses+smtp` scheme for SMTP transport:
+
+**DSN Format:** `ses+smtp://ACCESS_KEY:SECRET_KEY@email-smtp.REGION.amazonaws.com:587?region=REGION`
+
+1. Navigate to Configuration > Mail Send Settings
+2. Update the following fields:
+
+| Field    | Value                                     |
+| -------- | ----------------------------------------- |
+| Scheme   | `ses+smtp`                               |
+| Host     | `email-smtp.<region>.amazonaws.com`     |
+| Port     | `587` (STARTTLS) or `465` (SSL)         |
+| User     | `<aws-access-key>`                      |
+| Password | `<aws-secret-key>`                      |
+| Region   | `<aws-region>`                          |
+
+### Credential Notes
+
+- **Access Key:** AWS IAM user access key (typically 20 characters)
+- **Secret Key:** AWS IAM user secret key (can be 40-44+ characters - all supported)
+- **Region:** AWS region where SES is enabled (e.g., `us-east-1`, `eu-west-1`)
+- **Special Characters:** If your secret key contains `+`, `/`, `=`, etc., URL-encode it
+
+## DEBUGGING & TESTING
+
+Use the enhanced debug command to test and troubleshoot your configuration:
+
 ```bash
-aws sns create-topic --name mautic-ses-events --region us-east-1
+# Basic configuration analysis
+php bin/console mautic:amazon-ses:debug
+
+# Test real AWS SES connection
+php bin/console mautic:amazon-ses:debug --test-connection
+
+# Send a test email
+php bin/console mautic:amazon-ses:debug --test-email=your-email@domain.com
+
+# Complete test with connection and email
+php bin/console mautic:amazon-ses:debug --test-connection --test-email=your-email@domain.com --from=sender@your-verified-domain.com
 ```
 
-### 2. **Configurar SES Configuration Set**
-```bash
-# Criar configuration set
-aws sesv2 create-configuration-set --configuration-set-name mautic-config
+### Debug Features
 
-# Adicionar event destination
-aws sesv2 create-configuration-set-event-destination \
-  --configuration-set-name mautic-config \
-  --event-destination-name sns-destination \
-  --event-destination \
-  'Enabled=true,MatchingEventTypes=bounce,complaint,delivery,SnsDestination={TopicArn=arn:aws:sns:us-east-1:ACCOUNT:mautic-ses-events}'
+The debug command provides:
+- ✅ **DSN Validation:** Checks both `ses+api` and `ses+smtp` configurations
+- ✅ **AWS Connection Test:** Real connection to AWS SES with quota information
+- ✅ **Credential Validation:** Flexible validation for various key lengths
+- ✅ **Network Connectivity:** Tests connection to AWS endpoints
+- ✅ **Email Testing:** Sends actual test emails through your configuration
+- ✅ **Error Diagnosis:** Specific troubleshooting for common issues
+
+## AWS SNS CONFIGURATION
+
+To process bounces and complaints, configure AWS SNS:
+
+1. **Create SNS Topic:** Attach to your SES identity
+2. **Configure Subscription:**
+   - Protocol: `HTTPS`
+   - **Enable raw message delivery**
+   - Endpoint: `https://your-mautic-domain.com/mailer/callback`
+3. **Confirm Subscription:** The plugin will automatically confirm SNS subscriptions
+
+## TROUBLESHOOTING
+
+### Common Issues & Solutions
+
+**1. InvalidSignatureException**
+- Usually caused by special characters in secret key
+- Solution: URL-encode your secret key in the DSN
+- Run debug command for automatic analysis
+
+**2. MessageRejected Error**
+- Causes: Unverified sender address, sandbox mode, quota exceeded
+- Solution: Verify sender address in AWS SES console
+
+**3. Secret Key Length Warning**
+- Your 44-character secret keys are fully supported
+- No action needed - this is normal for some AWS configurations
+
+**4. Connection Timeouts**
+- Check network connectivity to AWS endpoints
+- Verify firewall allows outbound HTTPS traffic
+
+### Secret Key Encoding Example
+
+If your secret key contains special characters:
+
+```php
+// Original (may cause issues)
+ses+api://AKIAIOSFODNN7:wJalrXUt/K7MDENG+bPxRfi@default?region=us-east-1
+
+// URL-encoded (recommended)
+ses+api://AKIAIOSFODNN7:wJalrXUt%2FK7MDENG%2BbPxRfi@default?region=us-east-1
 ```
 
-### 3. **Configurar Subscrição HTTPS no SNS**
-- **Protocolo**: HTTPS
-- **Endpoint**: `https://seu-dominio.com/mailer/callback`
-- **Habilitar raw message delivery**: ✅ **Obrigatório**
+## REQUIREMENTS
 
-## 🎯 **Processamento de Webhooks**
+- Mautic 6.0+
+- PHP 8.1+
+- AWS SES account with verified domain/email
+- Symfony Amazon SES Bridge (for `ses+api` scheme)
 
-### **Eventos Suportados**
-O plugin processa automaticamente os seguintes tipos de callback:
+## DEVELOPMENT
 
-1. **SubscriptionConfirmation**: Confirmação automática de subscrições SNS
-2. **Bounce**: Processamento de bounces permanentes e temporários
-3. **Complaint**: Processamento de reclamações de spam
-4. **Delivery**: Confirmações de entrega (opcional)
+This plugin follows Mautic 6 plugin architecture and includes:
+- Event subscribers for webhook processing
+- Console commands for debugging
+- Service classes for bounce/complaint handling
+- Comprehensive logging for troubleshooting
 
-### **Endpoint de Callback**
-```
-POST https://seu-dominio.com/mailer/callback
-Content-Type: application/json
-```
+## AUTHOR
 
-## 🛠️ **Arquitetura do Plugin**
+👤 **Enhanced by Development Team**
 
-```
-AmazonSESBundle/
-├── AmazonSESBundle.php              # Classe principal do bundle
-├── Config/
-│   ├── config.php                   # Configurações do plugin
-│   └── services.php                 # Definição de serviços
-├── DependencyInjection/
-│   └── AmazonSESExtension.php       # Extensão de injeção de dependência
-├── EventSubscriber/
-│   └── CallbackSubscriber.php       # Processamento de webhooks SNS
-├── Services/
-│   └── AmazonSES/                   # Classes de modelo para callbacks
-└── Translations/
-    ├── en_US/messages.ini           # Traduções em inglês
-    └── pt_BR/messages.ini           # Traduções em português
-```
-
-## 🧪 **Teste e Verificação**
-
-### 1. **Teste de Envio de Email**
-```bash
-# Enviar emails via CLI
-php bin/console mautic:emails:send
-
-# Verificar logs
-tail -f var/logs/mautic_prod.log | grep -i "amazon\|ses"
-```
-
-### 2. **Teste de Callback SNS**
-```bash
-# Simular callback de confirmação
-curl -X POST https://seu-dominio.com/mailer/callback \
-  -H "Content-Type: application/json" \
-  -d '{
-    "Type": "SubscriptionConfirmation",
-    "SubscribeURL": "https://sns.amazonaws.com/...",
-    "TopicArn": "arn:aws:sns:us-east-1:123456789:mautic-ses-events"
-  }'
-```
-
-### 3. **Verificação de Status**
-```bash
-# Verificar se o plugin está ativo
-php bin/console mautic:plugins:list | grep -i amazon
-
-# Verificar configuração de email
-php bin/console debug:config
-```
-
-## 📊 **Funcionalidades Implementadas**
-
-- [x] **Transport Factory** com autowiring completo
-- [x] **Configurações dinâmicas** via DSN do Mautic
-- [x] **EventSubscriber** para processamento de webhooks
-- [x] **TransportCallback** automático
-- [x] **Processamento de bounces** permanentes e temporários
-- [x] **Processamento de complaints** automático
-- [x] **Confirmação automática SNS** 
-- [x] **Traduções** em português e inglês
-- [x] **Logs estruturados** para debugging
-- [x] **Validação de DSN** antes do processamento
-- [x] **Compatibilidade** total com Mautic 6.0
-
-## 🔧 **Suporte e Contribuição**
-
-### Reportar Problemas
-- GitHub Issues: https://github.com/rhafaman/mautic-amazon-ses-bundle/issues
-
-### Contribuir
-- Fork o projeto
-- Crie uma branch para sua feature
-- Faça commit com mensagens descritivas
-- Abra um Pull Request
-
-### Licença
-GPL-3.0-or-later
-
----
-
-**Amazon SES Bundle para Mautic 6.0 - Solução Completa de Email Transport** 🎉 
+Original concept by Pablo Veintimilla - Enhanced for Mautic 6 with improved debugging and multi-scheme support. 

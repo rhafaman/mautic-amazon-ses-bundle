@@ -104,20 +104,21 @@ class CallbackSubscriber implements EventSubscriberInterface
     protected function validateCallbackRequest(): bool
     {
         try {
-            // Valid if mailer transport is AWS SES
+            // Valid if mailer transport is AWS SES (supports both ses+api and ses+smtp)
             $dsnString = $this->coreParametersHelper->get('mailer_dsn');
             $dsn = Dsn::fromString($dsnString);
             
             $this->logger->info("🔍 DEBUG: Validating callback request", [
                 'dsn_scheme' => $dsn->getScheme(),
-                'expected_scheme' => AmazonSESBundle::AMAZON_SES_API_SCHEME,
-                'scheme_matches' => AmazonSESBundle::AMAZON_SES_API_SCHEME === $dsn->getScheme()
+                'supported_schemes' => AmazonSESBundle::SUPPORTED_SCHEMES,
+                'scheme_is_supported' => AmazonSESBundle::isSupportedScheme($dsn->getScheme())
             ]);
             
-            if (AmazonSESBundle::AMAZON_SES_API_SCHEME !== $dsn->getScheme()) {
-                $this->logger->warning("🔍 DEBUG: DSN scheme mismatch - callback ignored", [
+            // Use the new method to check if scheme is supported
+            if (!AmazonSESBundle::isSupportedScheme($dsn->getScheme())) {
+                $this->logger->warning("🔍 DEBUG: DSN scheme not supported - callback ignored", [
                     'current_scheme' => $dsn->getScheme(),
-                    'expected_scheme' => AmazonSESBundle::AMAZON_SES_API_SCHEME
+                    'supported_schemes' => AmazonSESBundle::SUPPORTED_SCHEMES
                 ]);
                 return false;
             }
