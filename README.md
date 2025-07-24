@@ -52,7 +52,7 @@ php bin/console cache:clear
 
 ### 1. **Configuração via Interface do Mautic (Recomendado)**
 1. Acesse **Configurações** → **Configuração** → **Configurações de Email**
-2. Em **Esquema do Transport de Email**, selecione: `Amazon SES API`
+2. Em **Esquema do Transport de Email**, selecione: `ses+smtp`
 3. Configure os campos:
    - **Host**: `default`
    - **Porta**: `465`
