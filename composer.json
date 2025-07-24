@@ -1,0 +1,45 @@
+{
+    "name": "rhafaman/mautic-amazon-ses-bundle",
+    "description": "Amazon SES plugin para Mautic 6 - Provides Amazon SES as email transport with bounce processing",
+    "type": "mautic-plugin",
+    "license": "GPL-3.0-or-later",
+    "homepage": "https://github.com/rhafaman/mautic-amazon-ses-bundle",
+    "keywords": [
+        "mautic", 
+        "plugin", 
+        "amazon", 
+        "ses", 
+        "email", 
+        "transport",
+        "bounce",
+        "callback",
+        "webhook"
+    ],
+    "authors": [
+        {
+            "name": "Rhafaman",
+            "email": "rhafaman@hotmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "mautic/core": "^6.0",
+        "aws/aws-sdk-php": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MauticPlugin\\AmazonSESBundle\\": ""
+        }
+    },
+    "extra": {
+        "install-directory-name": "AmazonSESBundle"
+    },
+    "support": {
+        "issues": "https://github.com/rhafaman/mautic-amazon-ses-bundle/issues",
+        "source": "https://github.com/rhafaman/mautic-amazon-ses-bundle",
+        "docs": "https://github.com/rhafaman/mautic-amazon-ses-bundle/blob/main/README.md"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+} 
