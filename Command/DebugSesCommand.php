@@ -228,10 +228,9 @@ class DebugSesCommand extends Command
                 $io->warning("Region is required. Add ?region=us-east-1 to your DSN");
             }
             
-            // Show all options
-            $options = $dsn->getOptions();
-            if (!empty($options)) {
-                $io->text("⚙️  All Options: <info>" . json_encode($options) . "</info>");
+            // Show region option (Dsn class doesn't have getOptions() method)
+            if ($region) {
+                $io->text("⚙️  Options: <info>region=" . $region . "</info>");
             }
             
             // Symfony Mailer scheme compatibility check
