@@ -25,7 +25,7 @@
     ],
     "require": {
         "php": ">=8.1",
-        "mautic/core": "^6.0",
+        "mautic/core-lib": "^6.0",
         "symfony/amazon-mailer": "^6.0",
         "teknasyon-teknoloji/aws-ses-notification": "^2.0"
     },
