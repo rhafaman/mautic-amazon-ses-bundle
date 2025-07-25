@@ -62,6 +62,12 @@ class DebugSesCommand extends Command
                 InputOption::VALUE_NONE,
                 'Test real connection to AWS SES'
             )
+            ->addOption(
+                'test-schemes',
+                's',
+                InputOption::VALUE_NONE,
+                'Test if Mautic recognizes ses+api and ses+smtp schemes'
+            )
             ->setHelp(
                 'This command helps debug Amazon SES configuration issues, especially InvalidSignatureException errors. ' .
                 'Supports both ses+api and ses+smtp schemes.'
@@ -82,12 +88,17 @@ class DebugSesCommand extends Command
             // 2. Check System Environment
             $this->checkSystemEnvironment($io);
             
-            // 3. Test AWS connection if requested
+            // 3. Test scheme recognition if requested
+            if ($input->getOption('test-schemes')) {
+                $this->testSchemesRecognition($io);
+            }
+            
+            // 4. Test AWS connection if requested
             if ($input->getOption('test-connection')) {
                 $this->testAwsConnection($io);
             }
             
-            // 4. Test email sending if requested
+            // 5. Test email sending if requested
             $testEmail = $input->getOption('test-email');
             if ($testEmail) {
                 $fromEmail = $input->getOption('from');
@@ -493,5 +504,114 @@ class DebugSesCommand extends Command
                 'trace' => $e->getTraceAsString()
             ]);
         }
+    }
+
+    private function testSchemesRecognition(SymfonyStyle $io): void
+    {
+        $io->section('🔧 Testing Scheme Recognition');
+        
+        try {
+            // Test current DSN
+            $dsnString = $this->coreParametersHelper->get('mailer_dsn');
+            $dsn = Dsn::fromString($dsnString);
+            
+            $scheme = $dsn->getScheme();
+            $io->text("Current DSN Scheme: <info>$scheme</info>");
+            
+            if (in_array($scheme, self::SUPPORTED_SES_SCHEMES)) {
+                $io->success("✅ Plugin recognizes the scheme: <info>$scheme</info>");
+            } else {
+                $io->error("❌ Plugin does NOT recognize the scheme: <e>$scheme</e>");
+            }
+            
+            // Test Symfony Mailer Transport Factory Recognition
+            $io->newLine();
+            $io->text("<options=bold>🚀 Testing Symfony Mailer Transport Factory:</>");
+            
+            $testSchemes = ['ses+api', 'ses+smtp'];
+            foreach ($testSchemes as $testScheme) {
+                $this->testTransportFactoryForScheme($io, $testScheme);
+            }
+            
+        } catch (\Exception $e) {
+            $io->error("Failed to test scheme recognition: " . $e->getMessage());
+        }
+    }
+
+    private function testTransportFactoryForScheme(SymfonyStyle $io, string $scheme): void
+    {
+        try {
+            // Create a test DSN with the given scheme
+            $testDsn = new Dsn(
+                $scheme,
+                'default',
+                'AKIATEST',
+                'TestSecretKey',
+                465,
+                ['region' => 'us-east-1']
+            );
+            
+            $io->text("Testing scheme: <info>$scheme</info>");
+            
+            // Try to get the mailer service and test transport creation
+            if ($this->mailer instanceof \Symfony\Component\Mailer\Mailer) {
+                $io->text("   📦 Mailer service: <info>Available</info>");
+                
+                // Check if we can find a transport factory for this scheme
+                $transportFactories = $this->getTransportFactories();
+                $factoryFound = false;
+                
+                foreach ($transportFactories as $factory) {
+                    if (method_exists($factory, 'supports') && $factory->supports($testDsn)) {
+                        $factoryFound = true;
+                        $io->text("   ✅ Transport Factory: <info>Found (" . get_class($factory) . ")</info>");
+                        
+                        // Try to create the transport
+                        try {
+                            $transport = $factory->create($testDsn);
+                            $io->text("   ✅ Transport Creation: <info>Success (" . get_class($transport) . ")</info>");
+                        } catch (\Exception $e) {
+                            $io->text("   ⚠️  Transport Creation: <comment>Failed - " . $e->getMessage() . "</comment>");
+                        }
+                        break;
+                    }
+                }
+                
+                if (!$factoryFound) {
+                    $io->text("   ❌ Transport Factory: <e>NOT FOUND</e>");
+                    $io->text("      <comment>This is why you get 'bridge is not installed' error!</comment>");
+                }
+            } else {
+                $io->text("   ❌ Mailer service: <e>Not available</e>");
+            }
+            
+        } catch (\Exception $e) {
+            $io->text("   ❌ Error testing $scheme: <e>" . $e->getMessage() . "</e>");
+        }
+        
+        $io->newLine();
+    }
+
+    private function getTransportFactories(): array
+    {
+        $factories = [];
+        
+        // Add standard factories
+        $factories[] = new \Symfony\Component\Mailer\Transport\NullTransportFactory();
+        $factories[] = new \Symfony\Component\Mailer\Transport\SendmailTransportFactory();
+        $factories[] = new \Symfony\Component\Mailer\Transport\NativeTransportFactory();
+        $factories[] = new \Symfony\Component\Mailer\Transport\Smtp\EsmtpTransportFactory();
+        
+        // Try to add Amazon SES factory if available
+        if (class_exists('Symfony\Component\Mailer\Bridge\Amazon\Transport\SesTransportFactory')) {
+            $factories[] = new \Symfony\Component\Mailer\Bridge\Amazon\Transport\SesTransportFactory();
+        }
+        
+        // ✅ Add our custom SES Transport Factory
+        if (class_exists('MauticPlugin\AmazonSESBundle\Transport\SesTransportFactory')) {
+            $factories[] = new \MauticPlugin\AmazonSESBundle\Transport\SesTransportFactory();
+        }
+        
+        return $factories;
     }
 } 
