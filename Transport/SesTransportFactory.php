@@ -33,32 +33,52 @@ class SesTransportFactory extends AbstractTransportFactory
             throw new \InvalidArgumentException(sprintf('The "%s" scheme is not supported.', $scheme));
         }
 
-        // Convert SES DSN to SMTP DSN for Amazon SES SMTP interface
-        $region = $dsn->getOption('region', 'us-east-1');
-        $smtpHost = "email-smtp.{$region}.amazonaws.com";
-        $port = $dsn->getPort() ?: 587;
-        
-        // Create SMTP DSN for Amazon SES
-        $smtpDsn = new Dsn(
-            'smtp',
-            $smtpHost,
-            $dsn->getUser(),
-            $dsn->getPassword(),
-            $port,
-            [
-                'encryption' => $port === 465 ? 'ssl' : 'tls',
-                'auth_mode' => 'login'
-            ]
-        );
-        
-        // Use the SMTP factory to create the actual transport
-        $smtpFactory = new \Symfony\Component\Mailer\Transport\Smtp\EsmtpTransportFactory(
-            $this->dispatcher,
-            $this->client,
-            $this->logger
-        );
-        
-        return $smtpFactory->create($smtpDsn);
+        // Handle ses+api scheme using Symfony's native Amazon SES transport
+        if ($scheme === 'ses+api') {
+            // Check if Symfony Amazon SES Bridge is available
+            if (class_exists('Symfony\Component\Mailer\Bridge\Amazon\Transport\SesTransportFactory')) {
+                $sesFactory = new \Symfony\Component\Mailer\Bridge\Amazon\Transport\SesTransportFactory(
+                    $this->dispatcher,
+                    $this->client,
+                    $this->logger
+                );
+                return $sesFactory->create($dsn);
+            } else {
+                throw new \RuntimeException('Symfony Amazon SES Bridge is not installed. Run: composer require symfony/amazon-mailer');
+            }
+        }
+
+        // Handle ses+smtp scheme by converting to standard SMTP DSN
+        if ($scheme === 'ses+smtp') {
+            $region = $dsn->getOption('region', 'us-east-1');
+            $smtpHost = "email-smtp.{$region}.amazonaws.com";
+            $port = $dsn->getPort() ?: 587;
+            
+            // Create SMTP DSN for Amazon SES
+            // Amazon SES uses: 587 with STARTTLS, 465 with SSL
+            $smtpDsn = new Dsn(
+                'smtp',
+                $smtpHost,
+                $dsn->getUser(),
+                $dsn->getPassword(),
+                $port,
+                [
+                    'encryption' => $port === 465 ? 'ssl' : 'starttls',
+                    'auth_mode' => 'login'
+                ]
+            );
+            
+            // Use the SMTP factory to create the actual transport
+            $smtpFactory = new \Symfony\Component\Mailer\Transport\Smtp\EsmtpTransportFactory(
+                $this->dispatcher,
+                $this->client,
+                $this->logger
+            );
+            
+            return $smtpFactory->create($smtpDsn);
+        }
+
+        throw new \InvalidArgumentException(sprintf('The "%s" scheme is not supported.', $scheme));
     }
 
     protected function getSupportedSchemes(): array

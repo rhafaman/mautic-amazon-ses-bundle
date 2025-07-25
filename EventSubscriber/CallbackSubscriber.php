@@ -338,7 +338,7 @@ class CallbackSubscriber implements EventSubscriberInterface
                 'user' => $dsn->getUser(),
                 'password_length' => $dsn->getPassword() ? strlen($dsn->getPassword()) : 0,
                 'password_has_special_chars' => $dsn->getPassword() ? $this->hasSpecialChars($dsn->getPassword()) : false,
-                'options' => $dsn->getOptions(),
+                'options' => $dsn->getOption(),
             ]);
 
             // Check for potential encoding issues
@@ -429,7 +429,7 @@ class CallbackSubscriber implements EventSubscriberInterface
                 'user_length' => $dsn->getUser() ? strlen($dsn->getUser()) : 0,
                 'password_length' => $dsn->getPassword() ? strlen($dsn->getPassword()) : 0,
                 'region' => $dsn->getOption('region'),
-                'all_options' => $dsn->getOptions()
+                'all_options' => $dsn->getOption()
             ];
 
             $logger->error("🔍 DSN Components Analysis:", $analysis);
