@@ -63,6 +63,12 @@ class DebugSesCommand extends Command
                 'Test real connection to AWS SES'
             )
             ->addOption(
+                'test-smtp-connectivity',
+                null,
+                InputOption::VALUE_NONE,
+                'Test SMTP connectivity to Amazon SES endpoints (ports 587 and 465)'
+            )
+            ->addOption(
                 'test-schemes',
                 's',
                 InputOption::VALUE_NONE,
@@ -88,17 +94,22 @@ class DebugSesCommand extends Command
             // 2. Check System Environment
             $this->checkSystemEnvironment($io);
             
-            // 3. Test scheme recognition if requested
+            // 3. Test SMTP connectivity if requested
+            if ($input->getOption('test-smtp-connectivity')) {
+                $this->testSmtpConnectivity($io);
+            }
+            
+            // 4. Test scheme recognition if requested
             if ($input->getOption('test-schemes')) {
                 $this->testSchemesRecognition($io);
             }
             
-            // 4. Test AWS connection if requested
+            // 5. Test AWS connection if requested
             if ($input->getOption('test-connection')) {
                 $this->testAwsConnection($io);
             }
             
-            // 5. Test email sending if requested
+            // 6. Test email sending if requested
             $testEmail = $input->getOption('test-email');
             if ($testEmail) {
                 $fromEmail = $input->getOption('from');
@@ -435,6 +446,61 @@ class DebugSesCommand extends Command
         } catch (\Exception $e) {
             $io->text("❌ Network connectivity: <error>Issues detected</error>");
             $io->text("   Error: " . $e->getMessage());
+        }
+    }
+
+    private function testSmtpConnectivity(SymfonyStyle $io): void
+    {
+        $io->section('🔗 Testing SMTP/SSL Connectivity');
+        
+        $dsnString = $this->coreParametersHelper->get('mailer_dsn');
+        try {
+            $dsn = Dsn::fromString($dsnString);
+            $scheme = $dsn->getScheme();
+            $host = $dsn->getHost();
+            $port = $dsn->getPort();
+            
+            $io->text("Testing SMTP/SSL connectivity to $host on port $port...");
+            
+            if ($scheme === 'ses+smtp') {
+                $io->text("ℹ️  Testing for STARTTLS (port 587)...");
+                $this->testSmtpPort($io, $host, 587);
+                $io->text("ℹ️  Testing for SSL (port 465)...");
+                $this->testSmtpPort($io, $host, 465);
+            } else {
+                $io->text("ℹ️  Testing for port $port...");
+                $this->testSmtpPort($io, $host, $port);
+            }
+            
+        } catch (\Exception $e) {
+            $io->error("Failed to parse DSN for SMTP connectivity test: " . $e->getMessage());
+        }
+    }
+
+    private function testSmtpPort(SymfonyStyle $io, string $host, int $port): void
+    {
+        $io->text("Attempting to connect to $host on port $port...");
+        
+        try {
+            $client = new Client([
+                'timeout' => 10,
+                'verify' => false // Disable SSL verification for testing
+            ]);
+            
+            $response = $client->request('HEAD', "https://$host:$port", [
+                'http_errors' => false
+            ]);
+            
+            if ($response->getStatusCode() < 500) {
+                $io->success("✅ Connection successful to $host:$port (Status: " . $response->getStatusCode() . ")");
+                $io->text("   (This might indicate a firewall issue or network problem)");
+            } else {
+                $io->warning("⚠️  Connection failed to $host:$port (Status: " . $response->getStatusCode() . ")");
+                $io->text("   (This might indicate a firewall issue, network problem, or Amazon SES is down)");
+            }
+        } catch (\Exception $e) {
+            $io->error("❌ Connection failed to $host:$port: " . $e->getMessage());
+            $io->text("   (This might indicate a firewall issue, network problem, or Amazon SES is down)");
         }
     }
 

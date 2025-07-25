@@ -119,22 +119,103 @@ To process bounces and complaints, configure AWS SNS:
 
 ### Common Issues & Solutions
 
-**1. InvalidSignatureException**
+**1. Connection Timeout Issues (SSL/TLS)**
+
+**Error:** `Connection could not be established with host "ssl://email-smtp.us-east-1.amazonaws.com:465": stream_socket_client(): Unable to connect to ssl://email-smtp.us-east-1.amazonaws.com:465 (Connection timed out)`
+
+**Root Causes & Solutions:**
+
+- **Port 465 SSL Issues:** Amazon SES port 465 can cause timeout issues with some server configurations
+  - **Solution:** Plugin automatically switches to port 587 (STARTTLS) for better compatibility
+  - **Manual Fix:** Change your DSN to use port 587 instead of 465
+
+- **Firewall/Network Issues:** Your server might be blocking outbound SMTP traffic
+  - **Test Connectivity:** Use the debug command: `php bin/console mautic:amazon-ses:debug --test-smtp-connectivity`
+  - **Solution:** Contact your hosting provider to ensure ports 587 and/or 465 are open for outbound traffic
+
+- **Shared Hosting Restrictions:** Many shared hosts block standard SMTP ports
+  - **Solution:** Some hosts provide alternative ports like 2587 for Amazon SES
+  - **Alternative:** Use `ses+api` scheme instead of `ses+smtp` for better compatibility
+
+**2. SSL/TLS Configuration Issues**
+
+The plugin now includes enhanced SSL/TLS configuration with:
+- Improved cipher suites for Amazon SES compatibility
+- Proper SNI (Server Name Indication) configuration
+- Connection timeout settings to prevent hanging
+- Automatic fallback from port 465 to 587
+
+**3. Recommended Configuration for ses+smtp:**
+
+```
+Scheme: ses+smtp
+Host: email-smtp.us-east-1.amazonaws.com
+Port: 587 (recommended) or 465
+Encryption: STARTTLS (port 587) or SSL (port 465)
+Auth: Login
+```
+
+**4. Alternative Configuration using ses+api (Recommended):**
+
+```
+Scheme: ses+api
+Host: default
+Port: 465
+User: <aws-access-key>
+Password: <aws-secret-key>
+Region: <aws-region>
+```
+
+**2. InvalidSignatureException**
 - Usually caused by special characters in secret key
 - Solution: URL-encode your secret key in the DSN
 - Run debug command for automatic analysis
 
-**2. MessageRejected Error**
+**3. MessageRejected Error**
 - Causes: Unverified sender address, sandbox mode, quota exceeded
 - Solution: Verify sender address in AWS SES console
 
-**3. Secret Key Length Warning**
+**4. Secret Key Length Warning**
 - Your 44-character secret keys are fully supported
 - No action needed - this is normal for some AWS configurations
 
-**4. Connection Timeouts**
+**5. Connection Timeouts**
 - Check network connectivity to AWS endpoints
 - Verify firewall allows outbound HTTPS traffic
+- Use debug command to test connectivity: `php bin/console mautic:amazon-ses:debug --test-smtp-connectivity`
+
+### Enhanced Debug Command
+
+The plugin includes a comprehensive debug command with new connectivity testing:
+
+```bash
+# Complete diagnostic with connectivity test
+php bin/console mautic:amazon-ses:debug --test-smtp-connectivity --test-connection
+
+# Test SMTP connectivity only
+php bin/console mautic:amazon-ses:debug --test-smtp-connectivity
+
+# Send test email with enhanced error diagnostics
+php bin/console mautic:amazon-ses:debug --test-email=your-email@domain.com --from=sender@your-verified-domain.com
+```
+
+### Port Recommendations
+
+Based on community feedback and AWS documentation:
+
+1. **Port 587 (STARTTLS) - RECOMMENDED**
+   - Better compatibility with hosting providers
+   - Less likely to be blocked by firewalls
+   - Supported by most email clients and servers
+
+2. **Port 465 (SSL)**
+   - Can cause timeout issues on some configurations
+   - Plugin automatically tries port 587 if 465 fails
+   - Use only if specifically required
+
+3. **Alternative Ports**
+   - Some hosting providers offer port 2587 for Amazon SES
+   - Check with your hosting provider for available ports
 
 ### Secret Key Encoding Example
 
