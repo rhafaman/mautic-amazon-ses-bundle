@@ -26,6 +26,6 @@ return function (ContainerConfigurator $configurator): void {
         ->tag('console.command');
 
     // ✅ Register Amazon SES Transport Factory
-    // $services->set(SesTransportFactory::class)
-    //     ->tag('mailer.transport_factory');
+    $services->set(SesTransportFactory::class)
+        ->tag('mailer.transport_factory');
 }; 
