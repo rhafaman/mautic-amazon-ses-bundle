@@ -45,17 +45,9 @@ class SesTransportFactory extends AbstractTransportFactory
                     $this->logger
                 );
                 
-                // Converter DSN para formato oficial
-                $officialDsn = new Dsn(
-                    'ses+api',
-                    'default',
-                    $dsn->getUser(),
-                    $dsn->getPassword(),
-                    null,
-                    ['region' => $dsn->getOption('region', 'us-east-1')]
-                );
-                
-                return $officialFactory->create($officialDsn);
+                // 🎯 CORREÇÃO: Passar DSN original diretamente sem reconversão
+                // Evita problemas de codificação/decodificação das credenciais
+                return $officialFactory->create($dsn);
             } else {
                 throw new \RuntimeException('Symfony Amazon SES Bridge is not installed. Run: composer require symfony/amazon-mailer');
             }
