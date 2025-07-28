@@ -5,24 +5,42 @@ declare(strict_types=1);
 return [
     'name'        => 'Amazon SES Bundle',
     'description' => 'Send emails through Amazon Simple Email Service (SES) with webhook support for bounces and complaints',
-    'version'     => '1.1.1',
+    'version'     => '1.1.2',
     'author'      => 'Rhafaman',
     
-    // ✅ OPCIONAL: Configurações específicas do plugin
+    // Adicionar rotas se necessário (opcional para transport)
+    'routes' => [],
+    
+    // Configuração de categorias (opcional)
+    'categories' => [],
+    
+    // Configuração de menu (opcional para transport)
+    'menu' => [],
+    
+    // Parâmetros do plugin (importante!)
     'parameters' => [
         'amazon_ses_region' => 'us-east-1',
         'amazon_ses_version' => 'latest',
+        'amazon_ses_api_enabled' => true,
+        'amazon_ses_webhook_enabled' => true,
     ],
     
-    // ✅ OPCIONAL: Rotas customizadas (você não precisa)
-    'routes' => [],
-    
-    // ✅ OPCIONAL: Configuração de serviços (funciona pelo autowiring)
+    // Configuração de serviços (essencial)
     'services' => [
-        'events' => [],
+        'events' => [
+            'mautic.amazon_ses.subscriber.callback' => [
+                'class' => \MauticPlugin\AmazonSESBundle\EventSubscriber\CallbackSubscriber::class,
+                'tag' => 'kernel.event_subscriber',
+            ],
+        ],
         'forms' => [],
         'models' => [],
         'integrations' => [],
-        'others' => [],
+        'others' => [
+            'mautic.amazon_ses.transport.factory' => [
+                'class' => \MauticPlugin\AmazonSESBundle\Transport\SesTransportFactory::class,
+                'tag' => 'mailer.transport_factory',
+            ],
+        ],
     ],
 ]; 
