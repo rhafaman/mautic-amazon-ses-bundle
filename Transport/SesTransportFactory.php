@@ -38,12 +38,24 @@ class SesTransportFactory extends AbstractTransportFactory
         if ($scheme === 'ses+api') {
             // Check if Symfony Amazon SES Bridge is available
             if (class_exists('Symfony\Component\Mailer\Bridge\Amazon\Transport\SesTransportFactory')) {
-                $sesFactory = new \Symfony\Component\Mailer\Bridge\Amazon\Transport\SesTransportFactory(
+                // Instalar: composer require symfony/amazon-mailer
+                $officialFactory = new \Symfony\Component\Mailer\Bridge\Amazon\Transport\SesTransportFactory(
                     $this->dispatcher,
                     $this->client,
                     $this->logger
                 );
-                return $sesFactory->create($dsn);
+                
+                // Converter DSN para formato oficial
+                $officialDsn = new Dsn(
+                    'ses+api',
+                    'default',
+                    $dsn->getUser(),
+                    $dsn->getPassword(),
+                    null,
+                    ['region' => $dsn->getOption('region', 'us-east-1')]
+                );
+                
+                return $officialFactory->create($officialDsn);
             } else {
                 throw new \RuntimeException('Symfony Amazon SES Bridge is not installed. Run: composer require symfony/amazon-mailer');
             }

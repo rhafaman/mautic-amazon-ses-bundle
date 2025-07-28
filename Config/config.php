@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'name'        => 'Amazon SES Bundle',
     'description' => 'Send emails through Amazon Simple Email Service (SES) with webhook support for bounces and complaints',
-    'version'     => '1.1.2',
+    'version'     => '1.1.3',
     'author'      => 'Rhafaman',
     
     // Adicionar rotas se necessário (opcional para transport)
