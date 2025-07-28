@@ -24,10 +24,10 @@
         }
     ],
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.2",
         "mautic/core-lib": "^6.0",
-        "symfony/amazon-mailer": "^6.0",
-        "teknasyon-teknoloji/aws-ses-notification": "^2.0"
+        "symfony/amazon-mailer": "^7.3.0",
+        "teknasyon-teknoloji/aws-ses-notification": "^2.1.1"
     },
     "extra": {
         "install-directory-name": "AmazonSESBundle"
@@ -37,6 +37,5 @@
         "source": "https://github.com/rhafaman/mautic-amazon-ses-bundle",
         "docs": "https://github.com/rhafaman/mautic-amazon-ses-bundle/blob/main/README.md"
     },
-    "minimum-stability": "stable",
-    "prefer-stable": true
+    "minimum-stability": "dev"
 } 
