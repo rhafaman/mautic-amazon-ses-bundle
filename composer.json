@@ -37,5 +37,6 @@
         "source": "https://github.com/rhafaman/mautic-amazon-ses-bundle",
         "docs": "https://github.com/rhafaman/mautic-amazon-ses-bundle/blob/main/README.md"
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "stable",
+    "prefer-stable": true
 } 
