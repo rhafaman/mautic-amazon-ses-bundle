@@ -53,8 +53,7 @@ class DebugSesCommand extends Command
                 'from',
                 'f',
                 InputOption::VALUE_OPTIONAL,
-                'From email address for test email',
-                'noreply@example.com'
+                'From email address for test email (auto-detected if not provided)'
             )
             ->addOption(
                 'test-connection',
@@ -113,6 +112,17 @@ class DebugSesCommand extends Command
             $testEmail = $input->getOption('test-email');
             if ($testEmail) {
                 $fromEmail = $input->getOption('from');
+                
+                // Se não foi fornecido um email 'from', tenta obter um dinamicamente
+                if (!$fromEmail) {
+                    $fromEmail = $this->getDefaultFromEmail();
+                    if (!$fromEmail) {
+                        $io->error('❌ Não foi possível determinar um email remetente padrão. Use --from=email@domain.com');
+                        return Command::FAILURE;
+                    }
+                    $io->text("📧 Email remetente detectado automaticamente: <info>$fromEmail</info>");
+                }
+                
                 $this->testEmailSending($io, $testEmail, $fromEmail);
             }
             
@@ -257,6 +267,9 @@ class DebugSesCommand extends Command
             
             // Symfony Mailer scheme compatibility check
             $this->checkSymfonyMailerCompatibility($io, $scheme);
+            
+            // Mostrar email padrão detectado
+            $this->showDefaultFromEmail($io);
             
         } catch (\Exception $e) {
             $io->error("Failed to parse DSN: " . $e->getMessage());
@@ -679,5 +692,115 @@ class DebugSesCommand extends Command
         }
         
         return $factories;
+    }
+
+    /**
+     * Obtém o email padrão dinamicamente baseado nas configurações do sistema
+     */
+    private function getDefaultFromEmail(): ?string
+    {
+        // 1. Tenta obter do parâmetro mailer_from_email (configuração padrão do Mautic)
+        $fromEmail = $this->coreParametersHelper->get('mailer_from_email');
+        if ($fromEmail) {
+            return $fromEmail;
+        }
+
+        // 2. Tenta obter do parâmetro webmaster_email
+        $webmasterEmail = $this->coreParametersHelper->get('webmaster_email');
+        if ($webmasterEmail) {
+            return $webmasterEmail;
+        }
+
+        // 3. Tenta extrair do DSN (caso seja um email completo no user)
+        try {
+            $dsnString = $this->coreParametersHelper->get('mailer_dsn');
+            if ($dsnString) {
+                $dsn = Dsn::fromString($dsnString);
+                $user = $dsn->getUser();
+                
+                // Verifica se o user parece ser um email (contém @ e ponto)
+                if ($user && filter_var($user, FILTER_VALIDATE_EMAIL)) {
+                    return $user;
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignora erros de parsing do DSN para este propósito
+        }
+
+        // 4. Fallback para emails comuns do sistema
+        $commonEmails = [
+            'noreply@' . ($_SERVER['HTTP_HOST'] ?? 'localhost'),
+            'no-reply@' . ($_SERVER['HTTP_HOST'] ?? 'localhost'),
+            'admin@' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+        ];
+
+        foreach ($commonEmails as $email) {
+            if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $email;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Mostra o email padrão detectado para o usuário
+     */
+    private function showDefaultFromEmail(SymfonyStyle $io): void
+    {
+        $io->newLine();
+        $io->text("<options=bold>📧 Email Remetente Padrão:</>");
+        
+        $defaultEmail = $this->getDefaultFromEmail();
+        
+        if ($defaultEmail) {
+            $io->text("✅ Email detectado: <info>$defaultEmail</info>");
+            
+            // Identificar a fonte do email
+            $source = $this->identifyEmailSource($defaultEmail);
+            $io->text("📍 Fonte: <comment>$source</comment>");
+            
+            $io->text("💡 Use este email com: <comment>--from=$defaultEmail</comment>");
+        } else {
+            $io->text("⚠️  Nenhum email padrão detectado");
+            $io->text("💡 Especifique um email com: <comment>--from=email@domain.com</comment>");
+        }
+    }
+
+    /**
+     * Identifica a fonte do email padrão
+     */
+    private function identifyEmailSource(string $email): string
+    {
+        // Verifica mailer_from_email
+        if ($this->coreParametersHelper->get('mailer_from_email') === $email) {
+            return 'Configuração mailer_from_email do Mautic';
+        }
+        
+        // Verifica webmaster_email
+        if ($this->coreParametersHelper->get('webmaster_email') === $email) {
+            return 'Configuração webmaster_email do Mautic';
+        }
+        
+        // Verifica se veio do DSN
+        try {
+            $dsnString = $this->coreParametersHelper->get('mailer_dsn');
+            if ($dsnString) {
+                $dsn = Dsn::fromString($dsnString);
+                if ($dsn->getUser() === $email) {
+                    return 'Usuário do DSN (mailer_dsn)';
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignora erros
+        }
+        
+        // Verifica se é um dos fallbacks baseados no host
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        if (strpos($email, "@$host") !== false) {
+            return "Gerado automaticamente baseado no host ($host)";
+        }
+        
+        return 'Fonte desconhecida';
     }
 } 

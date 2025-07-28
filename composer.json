@@ -29,11 +29,6 @@
         "symfony/amazon-mailer": "^6.0",
         "teknasyon-teknoloji/aws-ses-notification": "^2.0"
     },
-    "autoload": {
-        "psr-4": {
-            "MauticPlugin\\AmazonSESBundle\\": ""
-        }
-    },
     "extra": {
         "install-directory-name": "AmazonSESBundle"
     },

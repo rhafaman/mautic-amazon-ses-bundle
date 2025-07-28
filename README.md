@@ -1,251 +1,349 @@
-# Mautic 6 Amazon SES Plugin
+# Plugin Amazon SES para Mautic 6
 
-<p style="text-align: center;">
+<p align="center">
 <img src="Assets/img/icon.png" alt="Amazon SES" width="200"/>
 </p>
 
-This plugin enables Mautic 6 to use AWS SES as email transport and provides callbacks to process bounces and complaints.
+<p align="center">
+<strong>Plugin oficial para integração do Mautic 6 com Amazon Simple Email Service (SES)</strong>
+</p>
 
-**✨ Enhanced Features:**
-- ✅ Support for both `ses+api` and `ses+smtp` transport schemes
-- ✅ SNS callback processing for bounces and complaints
-- ✅ Advanced debug command for troubleshooting configuration issues
-- ✅ Flexible secret key validation (supports keys of various lengths, including 44-character keys)
-- ✅ Real AWS connection testing
-- ✅ Automatic signature exception debugging
+---
 
-## INSTALLATION
+## 🚀 **Recursos Aprimorados**
 
-1. Copy the plugin to your Mautic plugins directory:
+- ✅ **Suporte a múltiplos esquemas:** `ses+api` e `ses+smtp`
+- ✅ **Processamento de callbacks SNS** para bounces e reclamações
+- ✅ **Comando de debug avançado** com diagnóstico completo
+- ✅ **Detecção automática de email remetente** - sem necessidade de configuração manual
+- ✅ **Validação flexível de secret keys** (suporta chaves de 20-128 caracteres)
+- ✅ **Testes reais de conexão AWS** com informações de quota
+- ✅ **Debug automático de exceções de assinatura**
+- ✅ **Testes de conectividade SMTP/SSL**
+
+---
+
+## 📦 **Instalação**
+
+### 1. Copiar o Plugin
 ```bash
-cp -r examples/custom-plugins/plugins/AmazonSESBundle /path/to/mautic/plugins/
+cp -r examples/custom-plugins/plugins/AmazonSESBundle /caminho/para/mautic/plugins/
 ```
 
-2. Clear cache:
+### 2. Limpar Cache
 ```bash
 php bin/console cache:clear
 ```
 
-3. Install the plugin:
+### 3. Instalar Plugin
 ```bash
 php bin/console mautic:plugins:reload
 ```
 
-## CONFIGURATION
+### 4. Verificar Instalação
+```bash
+php bin/console mautic:amazon-ses:debug
+```
 
-### Option 1: Using SES API (Recommended)
+---
 
-Configure using the `ses+api` scheme for best performance:
+## ⚙️ **Configuração**
 
-**DSN Format:** `ses+api://ACCESS_KEY:SECRET_KEY@default?region=REGION`
+### 🔧 **Opção 1: SES API (Recomendado)**
 
-1. Navigate to Configuration > Mail Send Settings
-2. Update the following fields:
+**Melhor performance e compatibilidade**
 
-| Field    | Value                    |
+**Formato DSN:** `ses+api://ACCESS_KEY:SECRET_KEY@default?region=REGIAO`
+
+1. **Navegue para:** Configuração → Configurações de Envio de Email
+2. **Configure os campos:**
+
+| Campo    | Valor                    |
 | -------- | ------------------------ |
-| Scheme   | `ses+api`               |
+| Esquema  | `ses+api`               |
 | Host     | `default`               |
-| Port     | `465`                   |
-| User     | `<aws-access-key>`      |
-| Password | `<aws-secret-key>`      |
-| Region   | `<aws-region>`          |
+| Porta    | `465`                   |
+| Usuário  | `<aws-access-key>`      |
+| Senha    | `<aws-secret-key>`      |
+| Região   | `<aws-region>`          |
 
-### Option 2: Using SES SMTP
+### 🔧 **Opção 2: SES SMTP**
 
-Configure using the `ses+smtp` scheme for SMTP transport:
+**Compatível com configurações SMTP tradicionais**
 
-**DSN Format:** `ses+smtp://ACCESS_KEY:SECRET_KEY@email-smtp.REGION.amazonaws.com:587?region=REGION`
+**Formato DSN:** `ses+smtp://ACCESS_KEY:SECRET_KEY@email-smtp.REGIAO.amazonaws.com:587?region=REGIAO`
 
-1. Navigate to Configuration > Mail Send Settings
-2. Update the following fields:
+1. **Navegue para:** Configuração → Configurações de Envio de Email
+2. **Configure os campos:**
 
-| Field    | Value                                     |
+| Campo    | Valor                                     |
 | -------- | ----------------------------------------- |
-| Scheme   | `ses+smtp`                               |
-| Host     | `email-smtp.<region>.amazonaws.com`     |
-| Port     | `587` (STARTTLS) or `465` (SSL)         |
-| User     | `<aws-access-key>`                      |
-| Password | `<aws-secret-key>`                      |
-| Region   | `<aws-region>`                          |
+| Esquema  | `ses+smtp`                               |
+| Host     | `email-smtp.<regiao>.amazonaws.com`     |
+| Porta    | `587` (STARTTLS) ou `465` (SSL)         |
+| Usuário  | `<aws-access-key>`                      |
+| Senha    | `<aws-secret-key>`                      |
+| Região   | `<aws-region>`                          |
 
-### Credential Notes
+### 📝 **Notas sobre Credenciais**
 
-- **Access Key:** AWS IAM user access key (typically 20 characters)
-- **Secret Key:** AWS IAM user secret key (can be 40-44+ characters - all supported)
-- **Region:** AWS region where SES is enabled (e.g., `us-east-1`, `eu-west-1`)
-- **Special Characters:** If your secret key contains `+`, `/`, `=`, etc., URL-encode it
+- **Access Key:** Chave de acesso do usuário IAM AWS (tipicamente 20 caracteres)
+- **Secret Key:** Chave secreta do usuário IAM AWS (pode ter 20-128 caracteres - todas suportadas)
+- **Região:** Região AWS onde o SES está habilitado (`us-east-1`, `sa-east-1`, `eu-west-1`, etc.)
+- **Caracteres Especiais:** Se sua secret key contém `+`, `/`, `=`, etc., use URL encoding
 
-## DEBUGGING & TESTING
+---
 
-Use the enhanced debug command to test and troubleshoot your configuration:
+## 🔍 **Debug e Testes Avançados**
+
+### 🛠️ **Comando de Debug Inteligente**
+
+O plugin inclui um poderoso comando de debug com **detecção automática de configurações**:
 
 ```bash
-# Basic configuration analysis
+# Análise completa da configuração (recomendado para começar)
 php bin/console mautic:amazon-ses:debug
 
-# Test real AWS SES connection
+# Teste de conexão real com AWS SES
 php bin/console mautic:amazon-ses:debug --test-connection
 
-# Send a test email
-php bin/console mautic:amazon-ses:debug --test-email=your-email@domain.com
-
-# Complete test with connection and email
-php bin/console mautic:amazon-ses:debug --test-connection --test-email=your-email@domain.com --from=sender@your-verified-domain.com
-```
-
-### Debug Features
-
-The debug command provides:
-- ✅ **DSN Validation:** Checks both `ses+api` and `ses+smtp` configurations
-- ✅ **AWS Connection Test:** Real connection to AWS SES with quota information
-- ✅ **Credential Validation:** Flexible validation for various key lengths
-- ✅ **Network Connectivity:** Tests connection to AWS endpoints
-- ✅ **Email Testing:** Sends actual test emails through your configuration
-- ✅ **Error Diagnosis:** Specific troubleshooting for common issues
-
-## AWS SNS CONFIGURATION
-
-To process bounces and complaints, configure AWS SNS:
-
-1. **Create SNS Topic:** Attach to your SES identity
-2. **Configure Subscription:**
-   - Protocol: `HTTPS`
-   - **Enable raw message delivery**
-   - Endpoint: `https://your-mautic-domain.com/mailer/callback`
-3. **Confirm Subscription:** The plugin will automatically confirm SNS subscriptions
-
-## TROUBLESHOOTING
-
-### Common Issues & Solutions
-
-**1. Connection Timeout Issues (SSL/TLS)**
-
-**Error:** `Connection could not be established with host "ssl://email-smtp.us-east-1.amazonaws.com:465": stream_socket_client(): Unable to connect to ssl://email-smtp.us-east-1.amazonaws.com:465 (Connection timed out)`
-
-**Root Causes & Solutions:**
-
-- **Port 465 SSL Issues:** Amazon SES port 465 can cause timeout issues with some server configurations
-  - **Solution:** Plugin automatically switches to port 587 (STARTTLS) for better compatibility
-  - **Manual Fix:** Change your DSN to use port 587 instead of 465
-
-- **Firewall/Network Issues:** Your server might be blocking outbound SMTP traffic
-  - **Test Connectivity:** Use the debug command: `php bin/console mautic:amazon-ses:debug --test-smtp-connectivity`
-  - **Solution:** Contact your hosting provider to ensure ports 587 and/or 465 are open for outbound traffic
-
-- **Shared Hosting Restrictions:** Many shared hosts block standard SMTP ports
-  - **Solution:** Some hosts provide alternative ports like 2587 for Amazon SES
-  - **Alternative:** Use `ses+api` scheme instead of `ses+smtp` for better compatibility
-
-**2. SSL/TLS Configuration Issues**
-
-The plugin now includes enhanced SSL/TLS configuration with:
-- Improved cipher suites for Amazon SES compatibility
-- Proper SNI (Server Name Indication) configuration
-- Connection timeout settings to prevent hanging
-- Automatic fallback from port 465 to 587
-
-**3. Recommended Configuration for ses+smtp:**
-
-```
-Scheme: ses+smtp
-Host: email-smtp.us-east-1.amazonaws.com
-Port: 587 (recommended) or 465
-Encryption: STARTTLS (port 587) or SSL (port 465)
-Auth: Login
-```
-
-**4. Alternative Configuration using ses+api (Recommended):**
-
-```
-Scheme: ses+api
-Host: default
-Port: 465
-User: <aws-access-key>
-Password: <aws-secret-key>
-Region: <aws-region>
-```
-
-**2. InvalidSignatureException**
-- Usually caused by special characters in secret key
-- Solution: URL-encode your secret key in the DSN
-- Run debug command for automatic analysis
-
-**3. MessageRejected Error**
-- Causes: Unverified sender address, sandbox mode, quota exceeded
-- Solution: Verify sender address in AWS SES console
-
-**4. Secret Key Length Warning**
-- Your 44-character secret keys are fully supported
-- No action needed - this is normal for some AWS configurations
-
-**5. Connection Timeouts**
-- Check network connectivity to AWS endpoints
-- Verify firewall allows outbound HTTPS traffic
-- Use debug command to test connectivity: `php bin/console mautic:amazon-ses:debug --test-smtp-connectivity`
-
-### Enhanced Debug Command
-
-The plugin includes a comprehensive debug command with new connectivity testing:
-
-```bash
-# Complete diagnostic with connectivity test
-php bin/console mautic:amazon-ses:debug --test-smtp-connectivity --test-connection
-
-# Test SMTP connectivity only
+# Teste de conectividade SMTP (diagnóstico de rede)
 php bin/console mautic:amazon-ses:debug --test-smtp-connectivity
 
-# Send test email with enhanced error diagnostics
-php bin/console mautic:amazon-ses:debug --test-email=your-email@domain.com --from=sender@your-verified-domain.com
+# Envio de email de teste (com detecção automática do remetente)
+php bin/console mautic:amazon-ses:debug --test-email=seu-email@dominio.com
+
+# Teste completo com email específico do remetente
+php bin/console mautic:amazon-ses:debug --test-email=destino@dominio.com --from=remetente@dominio-verificado.com
+
+# Teste de reconhecimento de esquemas
+php bin/console mautic:amazon-ses:debug --test-schemes
 ```
 
-### Port Recommendations
+### 🎯 **Detecção Automática de Email Remetente**
 
-Based on community feedback and AWS documentation:
+**✨ NOVA FUNCIONALIDADE:** O plugin agora detecta automaticamente o email remetente!
 
-1. **Port 587 (STARTTLS) - RECOMMENDED**
-   - Better compatibility with hosting providers
-   - Less likely to be blocked by firewalls
-   - Supported by most email clients and servers
+**Ordem de prioridade de detecção:**
+1. **`mailer_from_email`** - Configuração padrão do Mautic
+2. **`webmaster_email`** - Email do administrador do sistema
+3. **Email do DSN** - Se o usuário do DSN for um email válido
+4. **Fallback automático** - Geração baseada no host atual
 
-2. **Port 465 (SSL)**
-   - Can cause timeout issues on some configurations
-   - Plugin automatically tries port 587 if 465 fails
-   - Use only if specifically required
-
-3. **Alternative Ports**
-   - Some hosting providers offer port 2587 for Amazon SES
-   - Check with your hosting provider for available ports
-
-### Secret Key Encoding Example
-
-If your secret key contains special characters:
-
-```php
-// Original (may cause issues)
-ses+api://AKIAIOSFODNN7:wJalrXUt/K7MDENG+bPxRfi@default?region=us-east-1
-
-// URL-encoded (recommended)
-ses+api://AKIAIOSFODNN7:wJalrXUt%2FK7MDENG%2BbPxRfi@default?region=us-east-1
+**Exemplo de saída:**
+```bash
+📧 Email Remetente Padrão:
+✅ Email detectado: admin@meusite.com.br
+📍 Fonte: Configuração mailer_from_email do Mautic
+💡 Use este email com: --from=admin@meusite.com.br
 ```
 
-## REQUIREMENTS
+### 📊 **Recursos do Debug**
 
-- Mautic 6.0+
-- PHP 8.1+
-- AWS SES account with verified domain/email
-- Symfony Amazon SES Bridge (for `ses+api` scheme)
+O comando de debug oferece análise completa:
 
-## DEVELOPMENT
+- ✅ **Validação de DSN:** Verifica configurações `ses+api` e `ses+smtp`
+- ✅ **Teste de Conexão AWS:** Conexão real ao SES com informações de quota
+- ✅ **Validação de Credenciais:** Suporte a chaves de diversos tamanhos
+- ✅ **Conectividade de Rede:** Testa conexão com endpoints AWS
+- ✅ **Teste de Email:** Envia emails reais através da configuração
+- ✅ **Diagnóstico de Erros:** Troubleshooting específico para problemas comuns
+- ✅ **Detecção de Email:** Identifica automaticamente email remetente
+- ✅ **Análise de Esquemas:** Verifica suporte a transportes
 
-This plugin follows Mautic 6 plugin architecture and includes:
-- Event subscribers for webhook processing
-- Console commands for debugging
-- Service classes for bounce/complaint handling
-- Comprehensive logging for troubleshooting
+---
 
-## AUTHOR
+## 📡 **Configuração AWS SNS**
 
-👤 **Enhanced by Development Team**
+Para processar bounces e reclamações automaticamente:
 
-Original concept by Pablo Veintimilla - Enhanced for Mautic 6 with improved debugging and multi-scheme support. 
+### 1. **Criar Tópico SNS**
+- Vincule à sua identidade SES
+- Configure notificações de bounce e complaint
+
+### 2. **Configurar Subscrição**
+- **Protocolo:** `HTTPS`
+- **⚠️ IMPORTANTE:** Habilite "raw message delivery"
+- **Endpoint:** `https://seu-dominio-mautic.com/mailer/callback`
+
+### 3. **Confirmação Automática**
+O plugin confirma automaticamente as subscrições SNS
+
+---
+
+## 🚨 **Troubleshooting**
+
+### **1. Problemas de Timeout de Conexão (SSL/TLS)**
+
+**Erro típico:**
+```
+Connection could not be established with host "ssl://email-smtp.us-east-1.amazonaws.com:465"
+```
+
+**Soluções:**
+
+**🔹 Problema de Porta 465:**
+```bash
+# Teste conectividade SMTP
+php bin/console mautic:amazon-ses:debug --test-smtp-connectivity
+
+# Mude para porta 587 (recomendado)
+ses+smtp://ACCESS_KEY:SECRET_KEY@email-smtp.us-east-1.amazonaws.com:587?region=us-east-1
+```
+
+**🔹 Bloqueio de Firewall:**
+- Contate seu provedor de hospedagem
+- Verifique se as portas 587 e/ou 465 estão abertas
+
+**🔹 Hospedagem Compartilhada:**
+- Use esquema `ses+api` em vez de `ses+smtp`
+- Alguns provedores oferecem porta alternativa 2587
+
+### **2. InvalidSignatureException**
+
+**Diagnóstico automático:**
+```bash
+php bin/console mautic:amazon-ses:debug --test-connection
+```
+
+**Soluções:**
+- URL-encode sua secret key se contém caracteres especiais
+- Verifique se as credenciais AWS estão corretas
+
+**Exemplo de encoding:**
+```bash
+# Original (pode causar problemas)
+wJalrXUt/K7MDENG+bPxRfi
+
+# URL-encoded (recomendado)
+wJalrXUt%2FK7MDENG%2BbPxRfi
+```
+
+### **3. MessageRejected Error**
+
+**Causas comuns:**
+- Endereço remetente não verificado no SES
+- Conta em modo sandbox (só envia para emails verificados)
+- Quota diária excedida
+
+**Solução:**
+```bash
+# Verificar quota e emails verificados
+php bin/console mautic:amazon-ses:debug --test-connection
+```
+
+### **4. Problemas de Email Remetente**
+
+**Com detecção automática:**
+```bash
+# O plugin detecta automaticamente
+php bin/console mautic:amazon-ses:debug --test-email=destino@domain.com
+
+# Se não detectar, especifique manualmente
+php bin/console mautic:amazon-ses:debug --test-email=destino@domain.com --from=remetente@domain.com
+```
+
+---
+
+## 🔧 **Configurações Recomendadas**
+
+### **Para ses+smtp (Máxima Compatibilidade):**
+```
+Esquema: ses+smtp
+Host: email-smtp.us-east-1.amazonaws.com
+Porta: 587 (STARTTLS - recomendado)
+Criptografia: STARTTLS
+Autenticação: Login
+```
+
+### **Para ses+api (Melhor Performance):**
+```
+Esquema: ses+api
+Host: default
+Porta: 465
+Usuário: <aws-access-key>
+Senha: <aws-secret-key>
+Região: <aws-region>
+```
+
+### **Prioridade de Portas:**
+1. **🥇 Porta 587 (STARTTLS)** - Melhor compatibilidade
+2. **🥈 Porta 465 (SSL)** - Pode causar timeouts
+3. **🥉 Porta 2587** - Alternativa de alguns provedores
+
+---
+
+## 📋 **Requisitos**
+
+- **Mautic:** 6.0+
+- **PHP:** 8.1+
+- **Conta AWS SES** com domínio/email verificado
+- **Symfony Amazon SES Bridge** (para esquema `ses+api`)
+- **Extensões PHP:** curl, openssl, json
+
+---
+
+## 🧪 **Desenvolvimento**
+
+### **Arquitetura do Plugin:**
+- Event subscribers para processamento de webhooks
+- Comandos de console para debugging
+- Classes de serviço para manipulação de bounces/complaints
+- Logging abrangente para troubleshooting
+- Factory de transporte personalizado para SES
+
+### **Testes:**
+```bash
+# Teste completo do ambiente
+php bin/console mautic:amazon-ses:debug --test-connection --test-smtp-connectivity
+
+# Teste de email com análise detalhada
+php bin/console mautic:amazon-ses:debug --test-email=teste@domain.com --from=remetente@domain.com
+```
+
+---
+
+## 📈 **Monitoramento e Logs**
+
+O plugin registra eventos importantes:
+- Emails enviados com sucesso
+- Erros de conexão e credenciais
+- Processamento de bounces/complaints
+- Análises de debug detalhadas
+
+**Localização dos logs:** `var/logs/` (pasta padrão do Mautic)
+
+---
+
+## 🆘 **Suporte**
+
+### **Problemas Comuns:**
+1. **Timeout de conexão** → Use `--test-smtp-connectivity`
+2. **Email não detectado** → Configure `mailer_from_email` no Mautic
+3. **Secret key inválida** → Use URL encoding para caracteres especiais
+4. **Quota excedida** → Verifique limites com `--test-connection`
+
+### **Debug Rápido:**
+```bash
+# Diagnóstico completo em um comando
+php bin/console mautic:amazon-ses:debug --test-connection --test-smtp-connectivity --test-email=seu-email@domain.com
+```
+
+---
+
+## 👥 **Créditos**
+
+**🔧 Desenvolvimento Aprimorado:** Equipe de Desenvolvimento
+**📝 Conceito Original:** Pablo Veintimilla
+
+**Melhorias para Mautic 6:**
+- Suporte a múltiplos esquemas de transporte
+- Detecção automática de configurações
+- Debug avançado com testes reais
+- Compatibilidade aprimorada com provedores de hospedagem
+
+---
+
+<p align="center">
+<strong>🚀 Plugin Amazon SES - Solução completa para envio de emails no Mautic 6</strong>
+</p> 
